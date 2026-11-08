@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FareCompare – Compare auto & cab fares in Bengaluru</title>
+  <title>FareCompare – Compare auto &amp; cab fares in Bengaluru</title>
   <meta name="description" content="Compare estimated auto, bike and cab fares across Namma Yatri, Rapido and Ola in Bengaluru and pick the cheapest ride." />
+  <!-- CartoDB Dark tiles need no extra CSS — no filter hack required -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -13,13 +14,29 @@
   <header class="nav">
     <div class="container nav-inner">
       <a href="#top" class="brand"><span class="brand-mark">F</span>FareCompare</a>
-      <nav class="nav-links">
+
+      <!-- Desktop nav -->
+      <nav class="nav-links" id="navLinks">
         <a href="#compare">Compare</a>
         <a href="#how">How it works</a>
         <a href="#platforms">Platforms</a>
       </nav>
-      <a href="#compare" class="btn btn-small">Check fares</a>
+
+      <div class="nav-right">
+        <a href="#compare" class="btn btn-small">Check fares</a>
+        <!-- Hamburger (mobile only) -->
+        <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
     </div>
+
+    <!-- Mobile dropdown -->
+    <nav class="mobile-nav" id="mobileNav" hidden>
+      <a href="#compare" class="mobile-nav-link">Compare</a>
+      <a href="#how"     class="mobile-nav-link">How it works</a>
+      <a href="#platforms" class="mobile-nav-link">Platforms</a>
+    </nav>
   </header>
 
   <main id="top">
@@ -54,7 +71,13 @@
             </div>
 
             <button type="submit" class="btn btn-block" id="compareBtn">Compare fares</button>
-            <p class="error" id="error" hidden></p>
+
+            <!-- Error bar with dismiss button -->
+            <p class="error" id="error" hidden>
+              <span id="errorMsg"></span>
+              <button type="button" class="error-dismiss" aria-label="Dismiss error"
+                onclick="document.getElementById('error').hidden=true">✕</button>
+            </p>
           </form>
         </div>
 
