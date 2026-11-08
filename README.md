@@ -37,20 +37,6 @@ Open http://localhost:3000 (the backend also serves the frontend).
 | GET | `/api/geocode?q=koramangala` | Address suggestions inside Bengaluru |
 | POST | `/api/compare` | Body: `{ "pickup": {lat,lng}, "drop": {lat,lng} }`. Returns distance, time, route and ranked fares |
 
-## Push to GitHub
-
-```bash
-cd farecompare
-git init
-git add .
-git commit -m "FareCompare: frontend and backend"
-git branch -M main
-git remote add origin https://github.com/<your-username>/farecompare.git
-git push -u origin main
-```
-
-Create the empty `farecompare` repository on github.com first (no README), then run the commands above.
-
 ## Deploy (free)
 
 **Simplest: one deploy on [Render](https://render.com)**
