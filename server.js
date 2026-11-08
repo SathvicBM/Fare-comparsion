@@ -1,16 +1,35 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const rateLimit = require("express-rate-limit");
 const { estimateFares } = require("./fare");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// Allow only your deployed frontend. Set ALLOWED_ORIGIN in Render / .env.
+// Falls back to localhost for local development.
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || "http://localhost:3000"
+}));
+
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+// Max 30 API requests per minute per IP to protect the free OSRM & Photon APIs.
+const limiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests. Please wait a moment and try again." }
+});
+app.use("/api/", limiter);
+
 app.use(express.json());
 
-// Bengaluru area: results are restricted to this box so addresses
-// can't match a same-named place somewhere else in the world.
+// ── Bengaluru bounding box ────────────────────────────────────────────────────
+// Results are restricted to this box so addresses can't match a same-named
+// place somewhere else in the world.
 const BBOX = { minLon: 77.35, minLat: 12.75, maxLon: 77.85, maxLat: 13.25 };
 const CENTER = { lat: 12.9716, lng: 77.5946 };
 
@@ -32,8 +51,9 @@ function haversineKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
+// ── Route (OSRM) ──────────────────────────────────────────────────────────────
 // Real road distance + route shape from the public OSRM server.
-// Falls back to straight-line distance x 1.3 if OSRM is unreachable.
+// Falls back to straight-line distance × 1.3 if OSRM is unreachable.
 async function getRoute(a, b) {
   try {
     const url =
@@ -61,9 +81,11 @@ async function getRoute(a, b) {
   }
 }
 
+// ── Routes ────────────────────────────────────────────────────────────────────
+
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 
-// GET /api/geocode?q=koramangala  ->  [{ label, lat, lng }]
+// GET /api/geocode?q=koramangala  →  [{ label, lat, lng }]
 app.get("/api/geocode", async (req, res) => {
   const q = String(req.query.q || "").trim();
   if (q.length < 3) return res.json([]);
@@ -118,8 +140,8 @@ app.post("/api/compare", async (req, res) => {
     durationMin: Math.round(route.durationMin),
     distanceSource: route.source,
     geometry: route.geometry,
-    fares,
-    cheapest: fares[0].id
+    fares
+    // Note: fares[0] is always the cheapest (array is sorted ascending).
   });
 });
 
