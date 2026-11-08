@@ -2,20 +2,22 @@ const API = (window.API_BASE || "").replace(/\/$/, "");
 
 const $ = (id) => document.getElementById(id);
 const els = {
-  form: $("compare"),
-  error: $("error"),
-  btn: $("compareBtn"),
+  form:    $("compare"),
+  error:   $("error"),
+  errorMsg: $("errorMsg"),
+  btn:     $("compareBtn"),
   results: $("results"),
-  cards: $("cards"),
-  fine: $("fine"),
+  cards:   $("cards"),
+  fine:    $("fine"),
   mapHint: $("mapHint")
 };
 
-// ---------- Map ----------
+// ── Map ───────────────────────────────────────────────────────────────────────
+// Using CartoDB Dark Matter tiles — proper dark theme, no CSS filter hack needed.
 const map = L.map("map", { zoomControl: true }).setView([12.9716, 77.5946], 11);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 18,
-  attribution: "&copy; OpenStreetMap contributors"
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+  maxZoom: 19,
+  attribution: "© <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors © <a href='https://carto.com/attributions'>CARTO</a>"
 }).addTo(map);
 
 let mapLayers = [];
@@ -33,7 +35,7 @@ function pin(color) {
 function drawRoute(pickup, drop, geometry) {
   clearMap();
   const a = L.marker([pickup.lat, pickup.lng], { icon: pin("#4fd1a5") }).addTo(map);
-  const b = L.marker([drop.lat, drop.lng], { icon: pin("#e88a5f") }).addTo(map);
+  const b = L.marker([drop.lat, drop.lng],   { icon: pin("#e88a5f") }).addTo(map);
   const coords = geometry
     ? geometry.coordinates.map(([lng, lat]) => [lat, lng])
     : [[pickup.lat, pickup.lng], [drop.lat, drop.lng]];
@@ -43,7 +45,7 @@ function drawRoute(pickup, drop, geometry) {
   els.mapHint.hidden = true;
 }
 
-// ---------- Autocomplete ----------
+// ── Autocomplete ──────────────────────────────────────────────────────────────
 function debounce(fn, ms) {
   let t;
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
@@ -51,26 +53,28 @@ function debounce(fn, ms) {
 
 function setupAutocomplete(inputId, listId) {
   const input = $(inputId);
-  const list = $(listId);
+  const list  = $(listId);
   const state = { selected: null };
+  let activeIndex = -1;
 
-  const hide = () => { list.hidden = true; list.innerHTML = ""; };
+  const hide = () => { list.hidden = true; list.innerHTML = ""; activeIndex = -1; };
 
   const search = debounce(async () => {
     const q = input.value.trim();
     if (q.length < 3) return hide();
     try {
-      const res = await fetch(`${API}/api/geocode?q=${encodeURIComponent(q)}`);
+      const res   = await fetch(`${API}/api/geocode?q=${encodeURIComponent(q)}`);
       const items = await res.json();
       if (!Array.isArray(items) || !items.length) return hide();
       list.innerHTML = "";
+      activeIndex = -1;
       items.forEach((item) => {
         const li = document.createElement("li");
         li.textContent = item.label;
         li.addEventListener("mousedown", (e) => {
           e.preventDefault();
-          input.value = item.label;
-          state.selected = item;
+          input.value     = item.label;
+          state.selected  = item;
           hide();
         });
         list.appendChild(li);
@@ -79,51 +83,108 @@ function setupAutocomplete(inputId, listId) {
     } catch { hide(); }
   }, 300);
 
+  // ── Keyboard navigation in suggestions (↑ ↓ Enter Escape) ──
+  input.addEventListener("keydown", (e) => {
+    const items = [...list.querySelectorAll("li")];
+    if (list.hidden || !items.length) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeIndex = Math.min(activeIndex + 1, items.length - 1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIndex = Math.max(activeIndex - 1, 0);
+    } else if (e.key === "Enter" && activeIndex >= 0) {
+      items[activeIndex].dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+      e.preventDefault();
+      return;
+    } else if (e.key === "Escape") {
+      hide();
+      return;
+    } else {
+      return; // other keys: let the input handle them
+    }
+
+    items.forEach((li, i) => li.classList.toggle("active", i === activeIndex));
+  });
+
   input.addEventListener("input", () => { state.selected = null; search(); });
-  input.addEventListener("blur", () => setTimeout(hide, 150));
+  input.addEventListener("blur",  () => setTimeout(hide, 150));
 
   return { input, state };
 }
 
 const pickupField = setupAutocomplete("pickup", "pickupSuggest");
-const dropField = setupAutocomplete("drop", "dropSuggest");
+const dropField   = setupAutocomplete("drop",   "dropSuggest");
 
-// If the user typed but didn't tap a suggestion, use the best match.
+// If the user typed but didn't tap a suggestion, resolve with the best match.
 async function resolve(field) {
   if (field.state.selected) return field.state.selected;
   const q = field.input.value.trim();
   if (!q) throw new Error("Please enter both a pickup and a drop location.");
-  const res = await fetch(`${API}/api/geocode?q=${encodeURIComponent(q)}`);
+  const res   = await fetch(`${API}/api/geocode?q=${encodeURIComponent(q)}`);
   const items = await res.json();
   if (!Array.isArray(items) || !items.length) {
     throw new Error(`Couldn't find "${q}" in Bengaluru. Try adding a neighbourhood or landmark.`);
   }
   field.state.selected = items[0];
-  field.input.value = items[0].label;
+  field.input.value    = items[0].label;
   return items[0];
 }
 
-// ---------- Swap ----------
+// ── Swap ──────────────────────────────────────────────────────────────────────
 $("swapBtn").addEventListener("click", () => {
   const a = pickupField, b = dropField;
-  [a.input.value, b.input.value] = [b.input.value, a.input.value];
+  [a.input.value, b.input.value]       = [b.input.value, a.input.value];
   [a.state.selected, b.state.selected] = [b.state.selected, a.state.selected];
 });
 
-// ---------- Render ----------
+// ── Hamburger (mobile nav) ────────────────────────────────────────────────────
+const hamburger = $("hamburger");
+const mobileNav  = $("mobileNav");
+if (hamburger && mobileNav) {
+  hamburger.addEventListener("click", () => {
+    const open = !mobileNav.hidden;
+    mobileNav.hidden = open;
+    hamburger.setAttribute("aria-expanded", String(!open));
+  });
+  // Close mobile nav when any link inside is clicked
+  mobileNav.querySelectorAll("a").forEach((a) => {
+    a.addEventListener("click", () => {
+      mobileNav.hidden = true;
+      hamburger.setAttribute("aria-expanded", "false");
+    });
+  });
+}
+
+// ── Vehicle icons ─────────────────────────────────────────────────────────────
+const VEHICLE_ICON = { auto: "🛺", bike: "🏍️", cab: "🚕" };
+
+// ── Render ────────────────────────────────────────────────────────────────────
 function showError(msg) {
-  els.error.textContent = msg;
-  els.error.hidden = !msg;
+  if (msg) {
+    els.errorMsg.textContent = msg;
+    els.error.hidden = false;
+  } else {
+    els.error.hidden = true;
+  }
+}
+
+function showSkeleton() {
+  els.results.hidden = false;
+  els.cards.innerHTML = Array(4).fill('<div class="skeleton-card"></div>').join("");
+  // Scroll to the stats bar (not the whole section) for a better mobile experience
+  els.results.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function render(data) {
-  const max = Math.max(...data.fares.map((f) => f.fare));
+  const max      = Math.max(...data.fares.map((f) => f.fare));
   const cheapest = data.fares[0].fare;
   const priciest = data.fares[data.fares.length - 1].fare;
 
   $("statDistance").textContent = `${data.distanceKm} km`;
-  $("statTime").textContent = `${data.durationMin} min`;
-  $("statSave").textContent = `₹${priciest - cheapest}`;
+  $("statTime").textContent     = `${data.durationMin} min`;
+  $("statSave").textContent     = `₹${priciest - cheapest}`;
 
   els.cards.innerHTML = "";
   data.fares.forEach((f, i) => {
@@ -131,6 +192,8 @@ function render(data) {
     card.className = "card" + (i === 0 ? " best" : "");
 
     const badge = i === 0 ? `<span class="badge">Cheapest</span>` : "";
+    const icon  = VEHICLE_ICON[f.type] || "";
+
     card.innerHTML = `
       ${badge}
       <div class="card-head">
@@ -144,12 +207,12 @@ function render(data) {
       <div class="note"></div>
     `;
     card.querySelector(".platform-name").textContent = f.platform;
-    card.querySelector(".vehicle").textContent = f.vehicle;
-    card.querySelector(".price").textContent = `₹${f.fare}`;
-    card.querySelector(".note").textContent = f.note;
+    card.querySelector(".vehicle").textContent       = `${icon} ${f.vehicle}`;
+    card.querySelector(".price").textContent         = `₹${f.fare}`;
+    card.querySelector(".note").textContent          = f.note;
     els.cards.appendChild(card);
 
-    // animate the bar after insertion
+    // Animate the bar after insertion
     requestAnimationFrame(() => {
       card.querySelector(".bar > span").style.width = `${Math.round((f.fare / max) * 100)}%`;
     });
@@ -162,25 +225,27 @@ function render(data) {
     "Fares are estimates and exclude surge, tolls and waiting charges.";
 
   els.results.hidden = false;
-  els.results.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// ---------- Submit ----------
+// ── Submit ────────────────────────────────────────────────────────────────────
 els.form.addEventListener("submit", async (e) => {
   e.preventDefault();
   showError("");
-  els.btn.disabled = true;
+  els.btn.disabled    = true;
   els.btn.textContent = "Comparing…";
+
+  // Show skeletons immediately so the user knows something is happening
+  showSkeleton();
 
   try {
     const [pickup, drop] = await Promise.all([resolve(pickupField), resolve(dropField)]);
 
-    const res = await fetch(`${API}/api/compare`, {
-      method: "POST",
+    const res  = await fetch(`${API}/api/compare`, {
+      method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      body:    JSON.stringify({
         pickup: { lat: pickup.lat, lng: pickup.lng },
-        drop: { lat: drop.lat, lng: drop.lng }
+        drop:   { lat: drop.lat,   lng: drop.lng   }
       })
     });
     const data = await res.json();
@@ -189,9 +254,11 @@ els.form.addEventListener("submit", async (e) => {
     drawRoute(pickup, drop, data.geometry);
     render(data);
   } catch (err) {
+    // Hide skeleton on error
+    els.results.hidden = true;
     showError(err.message || "Couldn't reach the server. Is the backend running?");
   } finally {
-    els.btn.disabled = false;
+    els.btn.disabled    = false;
     els.btn.textContent = "Compare fares";
   }
 });
