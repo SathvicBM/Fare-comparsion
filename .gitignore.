@@ -1,0 +1,18 @@
+# Dependencies: installed by `npm install`, never commit them
+node_modules/
+
+# Secrets: environment files can hold API keys and passwords
+.env
+.env.local
+
+# Logs created while the server runs
+*.log
+npm-debug.log*
+
+# Operating system clutter
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/
+.idea/
