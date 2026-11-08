@@ -1,6 +1,14 @@
-// Fare estimation based on approximate published rate cards for Bengaluru.
+// Fare estimation based on published rate cards for Bengaluru (updated 2025).
 // These are ESTIMATES, not live quotes. Edit the numbers below to tune them.
-// Fare = max(minFare, base + (distanceKm - baseKm) * perKm)
+// Formula: fare = max(minFare, base + (distanceKm - baseKm) * perKm)
+//
+// Sources:
+//   Namma Yatri / Auto meter: Karnataka RTA revised rate (Aug 2025) —
+//     ₹36 for first 2 km, ₹18/km thereafter.
+//   Rapido Auto: approx ₹46 min fare, ₹16/km after base.
+//   Rapido Bike: approx ₹25 base, ₹7/km — Karnataka Transport Dept data.
+//   Ola Mini: Karnataka cab fare regulation (Feb 2024) —
+//     ₹100 for first 4 km, ₹24/km thereafter.
 
 const SERVICES = [
   {
@@ -8,32 +16,32 @@ const SERVICES = [
     platform: "Namma Yatri",
     vehicle: "Auto",
     type: "auto",
-    base: 30, baseKm: 2, perKm: 15, minFare: 30,
-    note: "Zero-commission ONDC network"
+    base: 36, baseKm: 2, perKm: 18, minFare: 36,
+    note: "Karnataka govt meter rate · zero commission"
   },
   {
     id: "rapido_auto",
     platform: "Rapido",
     vehicle: "Auto",
     type: "auto",
-    base: 30, baseKm: 2, perKm: 16, minFare: 30,
-    note: "Estimated from rate card"
+    base: 46, baseKm: 2, perKm: 16, minFare: 46,
+    note: "Estimated from Rapido rate card"
   },
   {
     id: "rapido_bike",
     platform: "Rapido",
     vehicle: "Bike",
     type: "bike",
-    base: 20, baseKm: 2, perKm: 9, minFare: 20,
-    note: "Estimated from rate card"
+    base: 25, baseKm: 2, perKm: 7, minFare: 25,
+    note: "Estimated from Rapido rate card"
   },
   {
     id: "ola_mini",
     platform: "Ola",
     vehicle: "Cab (Mini)",
     type: "cab",
-    base: 60, baseKm: 2, perKm: 14, minFare: 60,
-    note: "Estimated from rate card"
+    base: 100, baseKm: 4, perKm: 24, minFare: 100,
+    note: "Karnataka regulated cab fare (Feb 2024)"
   }
 ];
 
