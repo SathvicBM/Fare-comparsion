@@ -3,139 +3,395 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FareCompare – Compare auto &amp; cab fares in Bengaluru</title>
-  <meta name="description" content="Compare estimated auto, bike and cab fares across Namma Yatri, Rapido and Ola in Bengaluru and pick the cheapest ride." />
-  <!-- CartoDB Dark tiles need no extra CSS — no filter hack required -->
+  <title>FareCompare – Luxury & Intelligent Transit Fare Comparison in Bengaluru</title>
+  <meta name="description" content="Compare estimated auto, bike, and cab fares across Namma Yatri, Rapido, and Ola in Bengaluru. Discover the smartest ride before booking." />
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Luxury Stylesheet -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
+  <!-- AMBIENT WARMTH GLOW -->
+  <div class="ambient-glow glow-top-left" aria-hidden="true"></div>
+  <div class="ambient-glow glow-top-right" aria-hidden="true"></div>
+
+  <!-- NAVIGATION -->
   <header class="nav">
     <div class="container nav-inner">
-      <a href="#top" class="brand"><span class="brand-mark">F</span>FareCompare</a>
+      <a href="#top" class="brand">
+        <div class="brand-crest">
+          <svg viewBox="0 0 24 24" class="crest-icon" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">FareCompare</span>
+          <span class="brand-subtitle">Bengaluru Transit Concierge</span>
+        </div>
+      </a>
 
-      <!-- Desktop nav -->
-      <nav class="nav-links" id="navLinks">
+      <nav class="nav-links">
         <a href="#compare">Compare</a>
-        <a href="#how">How it works</a>
+        <a href="#popular">Popular Routes</a>
+        <a href="#how">How It Works</a>
         <a href="#platforms">Platforms</a>
       </nav>
 
-      <div class="nav-right">
-        <a href="#compare" class="btn btn-small">Check fares</a>
-        <!-- Hamburger (mobile only) -->
-        <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
-          <span></span><span></span><span></span>
-        </button>
+      <div class="nav-actions">
+        <div class="status-indicator">
+          <span class="pulse-dot"></span>
+          <span class="status-label">Live Rate Cards</span>
+        </div>
+        <a href="#compare" class="btn btn-gold btn-small">Compare Rides</a>
       </div>
     </div>
-
-    <!-- Mobile dropdown -->
-    <nav class="mobile-nav" id="mobileNav" hidden>
-      <a href="#compare" class="mobile-nav-link">Compare</a>
-      <a href="#how"     class="mobile-nav-link">How it works</a>
-      <a href="#platforms" class="mobile-nav-link">Platforms</a>
-    </nav>
   </header>
 
   <main id="top">
 
-    <!-- HERO + TOOL -->
+    <!-- HERO SECTION -->
     <section class="hero">
       <div class="container hero-grid">
         <div class="hero-copy">
-          <span class="pill">Bengaluru &middot; Autos, bikes &amp; cabs</span>
-          <h1>Find the cheapest ride before you book.</h1>
-          <p class="lead">Type a pickup and a drop. See Namma Yatri, Rapido and Ola fares side by side.</p>
+          <div class="luxury-badge">
+            <span class="badge-gem">&#10022;</span>
+            <span>Intelligent Commute Optimization &middot; Bengaluru</span>
+          </div>
 
-          <form id="compare" class="tool" autocomplete="off">
-            <div class="field">
-              <span class="dot dot-pickup"></span>
-              <div class="field-body">
-                <label for="pickup">Pickup</label>
-                <input id="pickup" type="text" placeholder="e.g. Koramangala 5th Block" />
-                <ul class="suggest" id="pickupSuggest" hidden></ul>
+          <h1 class="hero-title">
+            Sophisticated Travel, <br />
+            <span class="gold-gradient-text">Effortlessly Priced.</span>
+          </h1>
+
+          <p class="hero-lead">
+            Curated fare intelligence across <strong>Namma Yatri</strong>, <strong>Rapido</strong>, and <strong>Ola</strong>. Compare real road distances, commute duration, and transparent rate cards before stepping out.
+          </p>
+
+          <!-- QUICK POPULAR ROUTE PRESETS -->
+          <div class="popular-routes" id="popular">
+            <span class="popular-title">Curated Destinations:</span>
+            <div class="chip-group">
+              <button type="button" class="route-chip" data-pickup="Koramangala 5th Block" data-drop="Indiranagar 100ft Road">
+                <span class="chip-icon">&#10024;</span> Koramangala &rarr; Indiranagar
+              </button>
+              <button type="button" class="route-chip" data-pickup="HSR Layout Sector 1" data-drop="Manyata Tech Park">
+                <span class="chip-icon">&#127970;</span> HSR &rarr; Manyata Park
+              </button>
+              <button type="button" class="route-chip" data-pickup="MG Road Metro" data-drop="Kempegowda International Airport">
+                <span class="chip-icon">&#9992;&#65039;</span> MG Road &rarr; Airport
+              </button>
+              <button type="button" class="route-chip" data-pickup="Electronic City Phase 1" data-drop="Bellandur Outer Ring Road">
+                <span class="chip-icon">&#128663;</span> E-City &rarr; Bellandur
+              </button>
+            </div>
+          </div>
+
+          <!-- COMPARISON TOOL FORM -->
+          <form id="compare" class="tool-card" autocomplete="off">
+            <div class="tool-header">
+              <span class="tool-tag">Ride Estimator</span>
+              <span class="tool-sub">Real-Time Routing &amp; Rate Analysis</span>
+            </div>
+
+            <!-- VEHICLE TYPE FILTER BAR -->
+            <div class="vehicle-filter-bar">
+              <button type="button" class="filter-tab active" data-filter="all">All Rides</button>
+              <button type="button" class="filter-tab" data-filter="auto">Auto 🛺</button>
+              <button type="button" class="filter-tab" data-filter="bike">Bike 🏍️</button>
+              <button type="button" class="filter-tab" data-filter="cab">Cab 🚕</button>
+            </div>
+
+            <div class="fields-container">
+              <!-- PICKUP FIELD -->
+              <div class="field-item">
+                <div class="field-indicator pickup-glow">
+                  <span class="ring-pulse"></span>
+                  <span class="core-dot pickup-dot"></span>
+                </div>
+                <div class="field-body">
+                  <label for="pickup">Pickup Location</label>
+                  <input id="pickup" type="text" placeholder="e.g. Koramangala 5th Block, Bengaluru" required />
+                  <ul class="suggest-box" id="pickupSuggest" hidden></ul>
+                </div>
+              </div>
+
+              <!-- SWAP BUTTON -->
+              <div class="swap-divider">
+                <button type="button" class="swap-button" id="swapBtn" title="Swap pickup and destination" aria-label="Swap pickup and drop">
+                  <svg viewBox="0 0 24 24" class="swap-svg" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- DROP FIELD -->
+              <div class="field-item">
+                <div class="field-indicator drop-glow">
+                  <span class="core-dot drop-dot"></span>
+                </div>
+                <div class="field-body">
+                  <label for="drop">Destination Drop</label>
+                  <input id="drop" type="text" placeholder="e.g. Manyata Tech Park, Nagavara" required />
+                  <ul class="suggest-box" id="dropSuggest" hidden></ul>
+                </div>
               </div>
             </div>
 
-            <button type="button" class="swap" id="swapBtn" aria-label="Swap pickup and drop">&#8645;</button>
+            <button type="submit" class="btn btn-gold btn-block" id="compareBtn">
+              <span class="btn-text">Compare Fares with Precision</span>
+              <svg viewBox="0 0 20 20" fill="currentColor" class="btn-arrow">
+                <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+            </button>
 
-            <div class="field">
-              <span class="dot dot-drop"></span>
-              <div class="field-body">
-                <label for="drop">Drop</label>
-                <input id="drop" type="text" placeholder="e.g. Manyata Tech Park" />
-                <ul class="suggest" id="dropSuggest" hidden></ul>
-              </div>
-            </div>
-
-            <button type="submit" class="btn btn-block" id="compareBtn">Compare fares</button>
-
-            <!-- Error bar with dismiss button -->
-            <p class="error" id="error" hidden>
-              <span id="errorMsg"></span>
-              <button type="button" class="error-dismiss" aria-label="Dismiss error"
-                onclick="document.getElementById('error').hidden=true">✕</button>
-            </p>
+            <p class="error-banner" id="error" hidden></p>
           </form>
         </div>
 
-        <div class="hero-map">
-          <div id="map"></div>
-          <div class="map-overlay" id="mapHint">Your route will appear here</div>
+        <!-- LUXURY MAP WRAPPER -->
+        <div class="hero-map-wrapper">
+          <div class="map-gold-frame">
+            <div id="map"></div>
+            
+            <div class="map-hud" id="mapHint">
+              <div class="hud-icon">&#128506;&#65039;</div>
+              <div class="hud-text">
+                <span class="hud-title">Interactive Route Radar</span>
+                <span class="hud-desc">Select pickup and destination to render live road itinerary</span>
+              </div>
+            </div>
+
+            <!-- FLOATING ROUTE METRICS BADGE -->
+            <div class="route-metrics-chip" id="routeMetricsChip" hidden>
+              <div class="metric-item">
+                <span class="metric-key">Road Distance</span>
+                <span class="metric-val" id="mapMetricDistance">-- km</span>
+              </div>
+              <div class="metric-divider"></div>
+              <div class="metric-item">
+                <span class="metric-key">Drive Time</span>
+                <span class="metric-val" id="mapMetricDuration">-- min</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- RESULTS -->
-    <section class="results" id="results" hidden>
+    <!-- RESULTS SECTION -->
+    <section class="results-section" id="results" hidden>
       <div class="container">
-        <div class="stats">
-          <div class="stat"><span class="stat-label">Distance</span><span class="stat-value" id="statDistance">–</span></div>
-          <div class="stat"><span class="stat-label">Travel time</span><span class="stat-value" id="statTime">–</span></div>
-          <div class="stat"><span class="stat-label">You could save</span><span class="stat-value accent" id="statSave">–</span></div>
+        <div class="results-header">
+          <div class="results-badge">
+            <span>Verified Fare Intelligence</span>
+          </div>
+          <h2 class="results-title">Optimal Ride Rankings</h2>
+          <p class="results-subtitle">Fares calculated via authentic Bengaluru rate structures, ranked from highest value to premium tier.</p>
         </div>
-        <div class="cards" id="cards"></div>
-        <p class="fine" id="fine"></p>
+
+        <!-- LUXURY STATS ROW -->
+        <div class="stats-glass-grid">
+          <div class="stat-glass-card">
+            <div class="stat-icon-wrapper gold-tint">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A2 2 0 013 15.485V5.515a2 2 0 011.553-1.954L9 2m0 18l6-3m-6 3V2m6 15l5.447 2.724A2 2 0 0021 17.94V7.97a2 2 0 00-1.553-1.954L15 4m0 13V4m0 0L9 2" />
+              </svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Measured Distance</span>
+              <span class="stat-value" id="statDistance">–</span>
+            </div>
+          </div>
+
+          <div class="stat-glass-card">
+            <div class="stat-icon-wrapper amber-tint">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Estimated Transit Time</span>
+              <span class="stat-value" id="statTime">–</span>
+            </div>
+          </div>
+
+          <div class="stat-glass-card highlight-card">
+            <div class="stat-icon-wrapper emerald-tint">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="stat-content">
+              <span class="stat-label">Maximum Potential Savings</span>
+              <span class="stat-value gold-accent" id="statSave">–</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- FARE COMPARISON CARDS GRID -->
+        <div class="cards-deck" id="cards"></div>
+
+        <!-- DETAILED RATE BREAKDOWN TABLE -->
+        <div class="breakdown-card">
+          <div class="breakdown-head">
+            <h3>Detailed Rate Card Structure</h3>
+            <span class="rate-note">Bengaluru Transport Regulatory Norms</span>
+          </div>
+          <div class="table-responsive">
+            <table class="luxury-table">
+              <thead>
+                <tr>
+                  <th>Platform</th>
+                  <th>Vehicle</th>
+                  <th>Base Fare (First 2 km)</th>
+                  <th>Per Additional Km</th>
+                  <th>Highlights</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Namma Yatri</strong></td>
+                  <td>Auto</td>
+                  <td>₹30</td>
+                  <td>₹15 / km</td>
+                  <td><span class="tag tag-gold">100% Direct to Driver &middot; ONDC</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Rapido</strong></td>
+                  <td>Auto</td>
+                  <td>₹30</td>
+                  <td>₹16 / km</td>
+                  <td><span class="tag tag-soft">Quick Auto Aggregator</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Rapido</strong></td>
+                  <td>Bike</td>
+                  <td>₹20</td>
+                  <td>₹9 / km</td>
+                  <td><span class="tag tag-soft">Rapid Solo Commute &middot; Traffic Saver</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Ola</strong></td>
+                  <td>Cab (Mini)</td>
+                  <td>₹60</td>
+                  <td>₹14 / km</td>
+                  <td><span class="tag tag-soft">Air-Conditioned Private Comfort</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <p class="fine-disclaimer" id="fine"></p>
       </div>
     </section>
 
     <!-- HOW IT WORKS -->
-    <section class="section" id="how">
+    <section class="section-curated" id="how">
       <div class="container">
-        <h2>How it works</h2>
-        <div class="steps">
-          <div class="step"><span class="step-num">1</span><h3>Enter your trip</h3><p>Type where you are and where you're going.</p></div>
-          <div class="step"><span class="step-num">2</span><h3>We measure the route</h3><p>Real road distance and travel time.</p></div>
-          <div class="step"><span class="step-num">3</span><h3>Compare and pick</h3><p>See every option ranked from cheapest.</p></div>
+        <div class="section-title-wrap">
+          <span class="section-label">Algorithmic Precision</span>
+          <h2 class="section-heading">How FareCompare Delivers Clarity</h2>
+          <p class="section-desc">Experience an effortless three-stage routing and price appraisal system crafted for Bengaluru commuters.</p>
+        </div>
+
+        <div class="steps-grid">
+          <div class="step-luxury-card">
+            <div class="step-numeral">I</div>
+            <div class="step-body">
+              <h3>Geospatial Geocoding</h3>
+              <p>Type your pickup and drop location. Our intelligent geocoding anchors directly to landmark coordinates across Bengaluru.</p>
+            </div>
+          </div>
+
+          <div class="step-luxury-card">
+            <div class="step-numeral">II</div>
+            <div class="step-body">
+              <h3>Real Road Route Profiling</h3>
+              <p>We trace actual street routes and live turn-by-turn road geometries to assess actual driving distance and realistic commute delays.</p>
+            </div>
+          </div>
+
+          <div class="step-luxury-card">
+            <div class="step-numeral">III</div>
+            <div class="step-body">
+              <h3>Transparent Rate Audit</h3>
+              <p>Every provider is estimated side by side according to official Bengaluru transport formulas so you never overpay.</p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- PLATFORMS -->
-    <section class="section alt" id="platforms">
+    <!-- PLATFORMS COMPARED -->
+    <section class="section-curated alt-tint" id="platforms">
       <div class="container">
-        <h2>Platforms compared</h2>
-        <div class="platforms">
-          <div class="platform"><h3>Namma Yatri</h3><p>Auto &middot; zero commission</p></div>
-          <div class="platform"><h3>Rapido</h3><p>Auto &middot; Bike</p></div>
-          <div class="platform"><h3>Ola</h3><p>Cab (Mini)</p></div>
+        <div class="section-title-wrap">
+          <span class="section-label">Partner Ecosystem</span>
+          <h2 class="section-heading">Analyzed Platforms</h2>
+          <p class="section-desc">Three leading transport mobility models evaluated side-by-side.</p>
         </div>
-        <p class="fine">Fares are estimates from published rate cards. Surge, tolls and waiting charges are not included, and live prices inside each app may differ.</p>
+
+        <div class="platforms-grid">
+          <div class="platform-luxury-card">
+            <div class="platform-emblem ny-emblem">NY</div>
+            <h3>Namma Yatri</h3>
+            <span class="platform-type">Auto Rickshaw &middot; Community Driver Network</span>
+            <p>Empowering drivers with zero middleman commissions on the Open Network for Digital Commerce (ONDC). Consistent and fair pricing.</p>
+          </div>
+
+          <div class="platform-luxury-card">
+            <div class="platform-emblem rapido-emblem">RP</div>
+            <h3>Rapido</h3>
+            <span class="platform-type">Auto &amp; Bike Taxi</span>
+            <p>India's leading bike-taxi and quick auto mobility service designed for brisk urban navigation through peak Bengaluru corridors.</p>
+          </div>
+
+          <div class="platform-luxury-card">
+            <div class="platform-emblem ola-emblem">OL</div>
+            <h3>Ola Mini</h3>
+            <span class="platform-type">Air-Conditioned Cab</span>
+            <p>Comfortable hatchback four-wheeler travel providing quiet ride privacy, weather shelter, and peaceful transit across long metropolitan stretches.</p>
+          </div>
+        </div>
+
+        <div class="disclaimer-box">
+          <span class="disclaimer-icon">&#9432;</span>
+          <p>Fares shown are benchmark estimates calculated using published regulatory rate cards. Platform dynamic surge, tolls, parking surcharges, and wait-time fees may apply within individual applications.</p>
+        </div>
       </div>
     </section>
   </main>
 
+  <!-- LUXURIOUS FOOTER -->
   <footer class="footer">
     <div class="container footer-inner">
-      <span>&copy; <span id="year"></span> FareCompare</span>
-      <span>Built with Node.js, Leaflet &amp; OpenStreetMap data</span>
+      <div class="footer-left">
+        <div class="footer-logo">FareCompare</div>
+        <p class="footer-tagline">Bengaluru's Premier Ride Comparison Concierge</p>
+      </div>
+
+      <div class="footer-right">
+        <span>&copy; <span id="year"></span> FareCompare. All rights reserved.</span>
+        <span class="footer-sub">Engineered with Precision &bull; Leaflet &bull; OpenStreetMap Data</span>
+      </div>
     </div>
   </footer>
 
+  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Config -->
   <script src="config.js"></script>
+  <!-- Application Logic -->
   <script src="app.js"></script>
 </body>
 </html>
