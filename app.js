@@ -1,11 +1,14 @@
 /**
- * FareCompare – Luxury Frontend Application Logic (v2.2)
- * Features:
+ * FareCompare Hyperiux Pro (v3.0)
+ * Signature Interaction Layer:
+ * - 60fps Interactive Particle Constellation Mesh (Hyperiux Canvas)
+ * - HTML5 Geolocation Sensor ("Use Current Location")
+ * - 3D Card Hover Tilt with Cursor Glare Tracking
  * - Direct OSRM Real Road Routing & Turn-by-Turn GeoJSON Geometry
- * - Native CartoDB Dark Matter Luxury Tile Layer (No CSS Inversion Glitches)
+ * - Native CartoDB Dark Matter Retina Tiles
  * - 2026 Realistic Bengaluru Regulatory Rate Cards
- * - Interactive "Book in App" Deep Link Redirects (Ola, Namma Yatri, Rapido)
- * - Seamless Standalone Execution on GitHub Pages without requiring a backend server
+ * - Eco Footprint & Carbon Metrics per Vehicle
+ * - Direct App Deep-Link Launcher (Ola, Namma Yatri, Rapido)
  */
 
 const API = (window.API_BASE || "").replace(/\/$/, "");
@@ -21,29 +24,33 @@ const els = {
   mapHint: $("mapHint"),
   routeMetricsChip: $("routeMetricsChip"),
   mapMetricDistance: $("mapMetricDistance"),
-  mapMetricDuration: $("mapMetricDuration")
+  mapMetricDuration: $("mapMetricDuration"),
+  mapTrafficStatus: $("mapTrafficStatus"),
+  trafficBadge: $("trafficBadge"),
+  trafficText: $("trafficText"),
+  geoBtn: $("geoBtn")
 };
 
 // Curated Bangalore Landmark Database with Precise GPS Coordinates
 const BENGALURU_HUBS = [
-  { label: "Koramangala 5th Block, Bengaluru", lat: 12.9352, lng: 77.6245, tag: "Hub" },
-  { label: "Indiranagar 100ft Road, Bengaluru", lat: 12.9719, lng: 77.6412, tag: "Commercial" },
-  { label: "Manyata Tech Park, Nagavara, Bengaluru", lat: 13.0475, lng: 77.6212, tag: "Tech Park" },
-  { label: "HSR Layout Sector 1, Bengaluru", lat: 12.9121, lng: 77.6446, tag: "Residential" },
-  { label: "MG Road Metro Station, Bengaluru", lat: 12.9756, lng: 77.6066, tag: "Metro Hub" },
-  { label: "Kempegowda International Airport (BLR), Devanahalli", lat: 13.1986, lng: 77.7066, tag: "Airport" },
-  { label: "Electronic City Phase 1, Bengaluru", lat: 12.8452, lng: 77.6602, tag: "Tech Park" },
+  { label: "Koramangala 5th Block, Bengaluru", lat: 12.9352, lng: 77.6245, tag: "Tech & Lifestyle" },
+  { label: "Indiranagar 100ft Road, Bengaluru", lat: 12.9719, lng: 77.6412, tag: "Commercial Hub" },
+  { label: "Manyata Tech Park, Nagavara, Bengaluru", lat: 13.0475, lng: 77.6212, tag: "Tech Corridor" },
+  { label: "HSR Layout Sector 1, Bengaluru", lat: 12.9121, lng: 77.6446, tag: "Residential & Startups" },
+  { label: "MG Road Metro Station, Bengaluru", lat: 12.9756, lng: 77.6066, tag: "Central Metro" },
+  { label: "Kempegowda International Airport (BLR), Devanahalli", lat: 13.1986, lng: 77.7066, tag: "Airport Hub" },
+  { label: "Electronic City Phase 1, Bengaluru", lat: 12.8452, lng: 77.6602, tag: "IT Hub" },
   { label: "Bellandur Outer Ring Road, Bengaluru", lat: 12.9260, lng: 77.6762, tag: "Tech Corridor" },
-  { label: "Whitefield ITPL Main Road, Bengaluru", lat: 12.9863, lng: 77.7308, tag: "Tech Park" },
-  { label: "Jayanagar 4th Block, Bengaluru", lat: 12.9299, lng: 77.5824, tag: "Shopping Hub" },
-  { label: "Marathahalli Bridge, Bengaluru", lat: 12.9592, lng: 77.6974, tag: "Junction" },
-  { label: "Church Street, Central Bengaluru", lat: 12.9749, lng: 77.6074, tag: "Lifestyle" },
-  { label: "Krantivira Sangolli Rayanna (Majestic) Railway Station", lat: 12.9781, lng: 77.5696, tag: "Transit" },
-  { label: "Hebbal Flyover, Bengaluru", lat: 13.0358, lng: 77.5970, tag: "Transit" },
-  { label: "Banashankari 2nd Stage, Bengaluru", lat: 12.9255, lng: 77.5654, tag: "Residential" }
+  { label: "Whitefield ITPL Main Road, Bengaluru", lat: 12.9863, lng: 77.7308, tag: "Tech Hub" },
+  { label: "Jayanagar 4th Block, Bengaluru", lat: 12.9299, lng: 77.5824, tag: "South Bangalore" },
+  { label: "Marathahalli Bridge, Bengaluru", lat: 12.9592, lng: 77.6974, tag: "Transit Junction" },
+  { label: "Church Street, Central Bengaluru", lat: 12.9749, lng: 77.6074, tag: "Heart of City" },
+  { label: "Krantivira Sangolli Rayanna (Majestic) Railway Station", lat: 12.9781, lng: 77.5696, tag: "Intercity Transit" },
+  { label: "Hebbal Flyover, Bengaluru", lat: 13.0358, lng: 77.5970, tag: "North Gateway" },
+  { label: "Banashankari 2nd Stage, Bengaluru", lat: 12.9255, lng: 77.5654, tag: "Heritage Hub" }
 ];
 
-// 2026 Realistic Bengaluru Regulatory Rate Cards
+// 2026 Realistic Bengaluru Regulatory Rate Cards & Carbon Profiles
 const SERVICES = [
   {
     id: "rapido_bike",
@@ -54,7 +61,8 @@ const SERVICES = [
     baseKm: 2,
     perKm: 11,      // ₹11 per km thereafter
     minFare: 30,
-    note: "Agile Solo Commute &middot; Traffic Saver",
+    co2PerKm: 28,   // 28g CO2/km (Eco Champion)
+    note: "Agile Solo Commute &middot; Traffic Slicer",
     getAppUrl: (pickup, drop) => "https://www.rapido.bike/"
   },
   {
@@ -66,6 +74,7 @@ const SERVICES = [
     baseKm: 2,
     perKm: 15,      // ₹15 per km (Karnataka Govt RTO standard)
     minFare: 40,
+    co2PerKm: 65,   // 65g CO2/km
     note: "100% Direct to Driver &middot; ONDC Zero Commission",
     getAppUrl: (pickup, drop) => "https://m.nammayatri.in/"
   },
@@ -78,6 +87,7 @@ const SERVICES = [
     baseKm: 2,
     perKm: 16.5,    // ₹16.5 per km aggregator slab
     minFare: 45,
+    co2PerKm: 65,   // 65g CO2/km
     note: "Quick Dispatch &middot; Live Meter Tracking",
     getAppUrl: (pickup, drop) => "https://www.rapido.bike/"
   },
@@ -90,6 +100,7 @@ const SERVICES = [
     baseKm: 4,
     perKm: 23,      // Revised ₹23 per km city rate
     minFare: 110,
+    co2PerKm: 140,  // 140g CO2/km
     note: "AC Private Cabin &middot; Weather & Luggage Comfort",
     getAppUrl: (pickup, drop) =>
       `https://book.olacabs.com/?pickup_lat=${pickup.lat}&pickup_lng=${pickup.lng}&drop_lat=${drop.lat}&drop_lng=${drop.lng}&pickup_name=${encodeURIComponent(pickup.label)}&drop_name=${encodeURIComponent(drop.label)}`
@@ -102,20 +113,102 @@ let currentPickup = null;
 let currentDrop = null;
 let activeVehicleFilter = "all";
 
-// ---------- Map Initialization with Native CartoDB Dark Matter ----------
+// ============================================================================
+// 1. HYPERIUX INTERACTIVE AMBIENT PARTICLE CANVAS (Constellation Effect)
+// ============================================================================
+function initHyperiuxCanvas() {
+  const canvas = $("hyperiuxCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  let width, height;
+  let particles = [];
+  const mouse = { x: -1000, y: -1000, radius: 140 };
+
+  const resize = () => {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+  };
+  window.addEventListener("resize", resize);
+  resize();
+
+  window.addEventListener("mousemove", (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  const count = Math.min(50, Math.floor((width * height) / 25000));
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.45,
+      vy: (Math.random() - 0.5) * 0.45,
+      radius: Math.random() * 1.6 + 0.6,
+      alpha: Math.random() * 0.5 + 0.2
+    });
+  }
+
+  function loop() {
+    ctx.clearRect(0, 0, width, height);
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+
+      if (p.x < 0) p.x = width;
+      if (p.x > width) p.x = 0;
+      if (p.y < 0) p.y = height;
+      if (p.y > height) p.y = 0;
+
+      // Mouse proximity interaction
+      const dx = mouse.x - p.x;
+      const dy = mouse.y - p.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < mouse.radius) {
+        const force = (1 - dist / mouse.radius) * 0.8;
+        p.x -= (dx / dist) * force;
+        p.y -= (dy / dist) * force;
+      }
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(245, 158, 11, ${p.alpha})`;
+      ctx.fill();
+
+      // Connecting lines
+      for (let j = i + 1; j < particles.length; j++) {
+        const p2 = particles[j];
+        const d = Math.hypot(p.x - p2.x, p.y - p2.y);
+        if (d < 110) {
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = `rgba(245, 158, 11, ${(1 - d / 110) * 0.12})`;
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// ============================================================================
+// 2. LEAFLET MAP (CartoDB Dark Matter Retina Tiles)
+// ============================================================================
 const map = L.map("map", {
   zoomControl: true,
   preferCanvas: true
 }).setView([12.9716, 77.5946], 12);
 
-// Native dark tiles - razor sharp, no CSS invert filter glitches
 L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
   maxZoom: 19,
   subdomains: "abcd",
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
 }).addTo(map);
 
-// Invalidate map size after DOM settles to prevent tile clipping
 setTimeout(() => { map.invalidateSize(); }, 300);
 window.addEventListener("resize", () => { map.invalidateSize(); });
 
@@ -125,25 +218,25 @@ const clearMap = () => {
   mapLayers = [];
 };
 
-function createLuxuryPin(color, glowColor) {
+function createHyperPin(color, glowColor) {
   return L.divIcon({
-    className: "custom-luxury-pin",
+    className: "hyper-pin",
     html: `
-      <div style="position:relative;width:26px;height:26px;display:flex;align-items:center;justify-content:center;">
-        <div style="position:absolute;inset:-4px;border-radius:50%;background:${glowColor};opacity:0.6;animation:pinPulse 2s infinite ease-in-out;"></div>
-        <div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #ffffff;box-shadow:0 3px 12px rgba(0,0,0,0.8);z-index:2;"></div>
+      <div style="position:relative;width:28px;height:28px;display:flex;align-items:center;justify-content:center;">
+        <div style="position:absolute;inset:-4px;border-radius:50%;background:${glowColor};opacity:0.65;animation:pinPulse 2s infinite ease-in-out;"></div>
+        <div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #ffffff;box-shadow:0 3px 14px rgba(0,0,0,0.9);z-index:2;"></div>
       </div>
     `,
-    iconSize: [26, 26],
-    iconAnchor: [13, 13]
+    iconSize: [28, 28],
+    iconAnchor: [14, 14]
   });
 }
 
 function drawRoute(pickup, drop, geometry) {
   clearMap();
 
-  const pickupPin = createLuxuryPin("#f4dc9b", "rgba(229, 192, 123, 0.45)");
-  const dropPin = createLuxuryPin("#e08244", "rgba(224, 130, 68, 0.45)");
+  const pickupPin = createHyperPin("#fbbf24", "rgba(245, 158, 11, 0.5)");
+  const dropPin = createHyperPin("#f97316", "rgba(249, 115, 22, 0.5)");
 
   const a = L.marker([pickup.lat, pickup.lng], { icon: pickupPin })
     .addTo(map)
@@ -163,17 +256,17 @@ function drawRoute(pickup, drop, geometry) {
     coords = [[pickup.lat, pickup.lng], [latMid, lngMid], [drop.lat, drop.lng]];
   }
 
-  // Draw luminous background road glow
+  // Draw luminous cyber-gold background road glow
   const glowLine = L.polyline(coords, {
-    color: "rgba(229, 192, 123, 0.35)",
-    weight: 9,
+    color: "rgba(245, 158, 11, 0.38)",
+    weight: 9.5,
     opacity: 0.85,
     lineCap: "round"
   }).addTo(map);
 
   // Draw crisp foreground road polyline
   const mainLine = L.polyline(coords, {
-    color: "#e5c07b",
+    color: "#fbbf24",
     weight: 4.5,
     opacity: 0.98,
     lineCap: "round",
@@ -193,7 +286,9 @@ function drawRoute(pickup, drop, geometry) {
   if (els.mapHint) els.mapHint.hidden = true;
 }
 
-// ---------- Direct OSRM Real Road Routing & Distance Calculation ----------
+// ============================================================================
+// 3. OSRM ROAD ROUTING & REGULATORY BENGALURU FARES
+// ============================================================================
 function haversineKm(a, b) {
   const R = 6371;
   const toRad = (d) => (d * Math.PI) / 180;
@@ -284,19 +379,24 @@ function calculateBengaluruFares(distanceKm, pickup, drop) {
       fare += 115;
     }
 
+    const co2Total = Math.round(s.co2PerKm * distanceKm);
+
     return {
       id: s.id,
       platform: s.platform,
       vehicle: s.vehicle,
       type: s.type,
-      note: isAirport && s.type === "cab" ? s.note + " (Includes Airport Toll ₹115)" : s.note,
+      note: isAirport && s.type === "cab" ? s.note + " (Airport Toll Included)" : s.note,
       fare: Math.round(fare),
+      co2: co2Total,
       appUrl: s.getAppUrl(pickup, drop)
     };
   }).sort((a, b) => a.fare - b.fare);
 }
 
-// ---------- Autocomplete with Curated Bangalore Hubs ----------
+// ============================================================================
+// 4. AUTOCOMPLETE WITH BENGALURU HUBS & GEOLOCATION
+// ============================================================================
 function debounce(fn, ms) {
   let t;
   return (...args) => {
@@ -399,7 +499,6 @@ async function resolve(field, defaultHub) {
 
   const q = (field.input.value.trim() || defaultHub.label).toLowerCase();
 
-  // Search curated hubs
   const match = BENGALURU_HUBS.find((h) => h.label.toLowerCase().includes(q));
   if (match) {
     field.state.selected = match;
@@ -407,13 +506,43 @@ async function resolve(field, defaultHub) {
     return match;
   }
 
-  // Fallback to default hub
   field.state.selected = defaultHub;
   field.input.value = defaultHub.label;
   return defaultHub;
 }
 
-// ---------- Swap Functionality ----------
+// "Use Current Location" GPS Sensor
+if (els.geoBtn) {
+  els.geoBtn.addEventListener("click", () => {
+    if (!navigator.geolocation) {
+      showError("Geolocation is not supported by your browser.");
+      return;
+    }
+    els.geoBtn.innerHTML = `<span>Locating...</span>`;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          label: "My Current Location, Bengaluru"
+        };
+        pickupField.state.selected = coords;
+        pickupField.input.value = coords.label;
+        els.geoBtn.innerHTML = `<span>&check; Located</span>`;
+        setTimeout(() => {
+          els.geoBtn.innerHTML = `<span>Current Location</span>`;
+        }, 2000);
+      },
+      (err) => {
+        els.geoBtn.innerHTML = `<span>Current Location</span>`;
+        showError("GPS Location permission denied or unavailable.");
+      },
+      { timeout: 8000 }
+    );
+  });
+}
+
+// Swap Functionality
 $("swapBtn").addEventListener("click", () => {
   const a = pickupField;
   const b = dropField;
@@ -421,9 +550,12 @@ $("swapBtn").addEventListener("click", () => {
   [a.state.selected, b.state.selected] = [b.state.selected, a.state.selected];
 });
 
-// ---------- Popular Route Preset Chips ----------
-document.querySelectorAll(".route-chip").forEach((btn) => {
+// Popular Route Preset Chips
+document.querySelectorAll(".chip").forEach((btn) => {
   btn.addEventListener("click", () => {
+    document.querySelectorAll(".chip").forEach((c) => c.classList.remove("active"));
+    btn.classList.add("active");
+
     const pName = btn.getAttribute("data-pickup");
     const dName = btn.getAttribute("data-drop");
 
@@ -444,10 +576,10 @@ document.querySelectorAll(".route-chip").forEach((btn) => {
   });
 });
 
-// ---------- Vehicle Filter Tabs ----------
-document.querySelectorAll(".filter-tab").forEach((tab) => {
+// Vehicle Segment Bar
+document.querySelectorAll(".segment-tab").forEach((tab) => {
   tab.addEventListener("click", () => {
-    document.querySelectorAll(".filter-tab").forEach((t) => t.classList.remove("active"));
+    document.querySelectorAll(".segment-tab").forEach((t) => t.classList.remove("active"));
     tab.classList.add("active");
     activeVehicleFilter = tab.getAttribute("data-filter");
     if (currentFareData) {
@@ -456,7 +588,26 @@ document.querySelectorAll(".filter-tab").forEach((tab) => {
   });
 });
 
-// ---------- Render Results & Interactive Cards ----------
+// ============================================================================
+// 5. 3D CARD TILT & LIVE RENDER
+// ============================================================================
+function enableCardTilt(card) {
+  card.addEventListener("mousemove", (e) => {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -5;
+    const rotateY = ((x - centerX) / centerX) * 5;
+    card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
+  });
+
+  card.addEventListener("mouseleave", () => {
+    card.style.transform = "perspective(800px) rotateX(0deg) rotateY(0deg) translateY(0)";
+  });
+}
+
 function showError(msg) {
   els.error.textContent = msg;
   els.error.hidden = !msg;
@@ -482,6 +633,10 @@ function renderCards(data) {
     els.routeMetricsChip.hidden = false;
     els.mapMetricDistance.textContent = `${data.distanceKm} km`;
     els.mapMetricDuration.textContent = `${data.durationMin} min`;
+    if (els.mapTrafficStatus) {
+      els.mapTrafficStatus.textContent = data.durationMin > 50 ? "Heavy Peak" : "Moderate";
+      els.mapTrafficStatus.className = `m-val ${data.durationMin > 50 ? "orange" : "green"}`;
+    }
   }
 
   els.cards.innerHTML = "";
@@ -501,14 +656,13 @@ function renderCards(data) {
     card.className = "card" + (isBest ? " best" : "");
 
     const badge = isBest
-      ? `<span class="badge-best-value">&#10024; Lowest Fare</span>`
+      ? `<span class="badge-best-value">&#10024; Lowest Benchmark</span>`
       : "";
 
     let vehicleIcon = "🛺";
     if (f.type === "bike") vehicleIcon = "🏍️";
     if (f.type === "cab") vehicleIcon = "🚕";
 
-    // Build the dynamic App redirect link
     const bookUrl = f.appUrl || "https://m.nammayatri.in/";
 
     card.innerHTML = `
@@ -516,7 +670,10 @@ function renderCards(data) {
       <div class="card-head">
         <div class="card-platform-info">
           <div class="platform-name">${f.platform}</div>
-          <div class="vehicle">${vehicleIcon} ${f.vehicle}</div>
+          <div class="vehicle">
+            <span>${vehicleIcon} ${f.vehicle}</span>
+            <span class="eco-tag">${f.co2}g CO₂</span>
+          </div>
         </div>
         <div class="price-tag">
           <span class="price-label">Estimated Fare</span>
@@ -534,6 +691,7 @@ function renderCards(data) {
     `;
 
     els.cards.appendChild(card);
+    enableCardTilt(card);
 
     // Animate progress bar smoothly
     requestAnimationFrame(() => {
@@ -551,13 +709,15 @@ function renderCards(data) {
   els.results.hidden = false;
 }
 
-// ---------- Form Submit Execution ----------
+// ============================================================================
+// 6. FORM SUBMISSION
+// ============================================================================
 els.form.addEventListener("submit", async (e) => {
   e.preventDefault();
   showError("");
   els.btn.disabled = true;
   els.btn.innerHTML = `
-    <span class="btn-text">Tracing Road Route &amp; Fares&hellip;</span>
+    <span class="btn-text">Calculating Itinerary &amp; Rates&hellip;</span>
   `;
 
   try {
@@ -584,8 +744,9 @@ els.form.addEventListener("submit", async (e) => {
   } finally {
     els.btn.disabled = false;
     els.btn.innerHTML = `
-      <span class="btn-text">Compare Fares with Precision</span>
-      <svg viewBox="0 0 20 20" fill="currentColor" class="btn-arrow">
+      <span class="btn-shine"></span>
+      <span class="btn-text">Compute Real Road Itinerary &amp; Fares</span>
+      <svg viewBox="0 0 20 20" fill="currentColor" class="btn-chevron">
         <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
       </svg>
     `;
@@ -596,8 +757,10 @@ els.form.addEventListener("submit", async (e) => {
 const yearSpan = $("year");
 if (yearSpan) yearSpan.textContent = new Date().getFullYear();
 
-// Initial Auto-Render on Page Load for Immediate Visual Verification
+// Initialize Ambient Particle Canvas & Auto-Render
 window.addEventListener("DOMContentLoaded", () => {
+  initHyperiuxCanvas();
+
   pickupField.input.value = BENGALURU_HUBS[0].label;
   pickupField.state.selected = BENGALURU_HUBS[0];
 
