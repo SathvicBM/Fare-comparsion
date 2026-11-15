@@ -8,8 +8,8 @@
   --bg-canvas: #0b0c10;
   --bg-surface: #121319;
   --bg-surface-elevated: #181922;
-  --bg-card: rgba(23, 24, 33, 0.82);
-  --bg-card-hover: rgba(30, 32, 44, 0.92);
+  --bg-card: rgba(23, 24, 33, 0.85);
+  --bg-card-hover: rgba(30, 32, 44, 0.95);
 
   /* Gold & Champagne Luxury Accents */
   --gold-primary: #e5c07b;
@@ -36,7 +36,7 @@
 
   /* Lines & Borders */
   --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-card: rgba(229, 192, 123, 0.15);
+  --border-card: rgba(229, 192, 123, 0.16);
 
   /* Radii & Shadows */
   --radius-sm: 8px;
@@ -85,7 +85,7 @@ h1, h2, h3, h4, p {
 a {
   color: inherit;
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .container {
@@ -123,7 +123,7 @@ a {
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: rgba(11, 12, 16, 0.88);
+  background: rgba(11, 12, 16, 0.90);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--border-card);
@@ -632,21 +632,23 @@ a {
   border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--border-card);
-  background: var(--bg-surface);
+  background: #0f1016;
   box-shadow: var(--shadow-luxury);
 }
 #map {
   width: 100%;
   height: 100%;
-  background: #0d0f14;
+  background: #0e0f15;
 }
-.leaflet-tile-pane {
-  filter: invert(1) hue-rotate(195deg) brightness(0.85) contrast(1.15) saturate(0.45);
+
+.leaflet-container {
+  background: #0e0f15 !important;
 }
+
 .map-hud {
   position: absolute;
   inset: auto 16px 16px 16px;
-  background: rgba(14, 16, 22, 0.9);
+  background: rgba(14, 16, 22, 0.92);
   backdrop-filter: blur(14px);
   border: 1px solid var(--border-card);
   color: var(--text-muted);
@@ -934,26 +936,44 @@ a {
 
 .note-box {
   margin-top: auto;
-  padding-top: 0.9rem;
+  padding-top: 1rem;
   border-top: 1px solid var(--border-subtle);
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 10px;
 }
 .note {
   font-size: 12px;
   color: var(--text-muted);
 }
-.book-hint-link {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--gold-light);
-  display: inline-flex;
+
+/* BOOK IN APP REDIRECT BUTTON */
+.book-action-btn {
+  display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(229, 192, 123, 0.12);
+  border: 1px solid rgba(229, 192, 123, 0.35);
+  color: var(--gold-light);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.book-hint-link:hover {
-  text-decoration: underline;
+.book-action-btn:hover {
+  background: linear-gradient(135deg, #f4dc9b, #d4a748);
+  color: #12110c;
+  border-color: transparent;
+  box-shadow: 0 4px 15px rgba(216, 165, 72, 0.4);
+  transform: translateY(-1px);
+}
+.card.best .book-action-btn {
+  background: linear-gradient(135deg, rgba(244, 220, 155, 0.25), rgba(212, 167, 72, 0.25));
+  border-color: var(--gold-primary);
 }
 
 /* BREAKDOWN TABLE */
