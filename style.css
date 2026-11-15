@@ -682,9 +682,13 @@ a {
   background: #0b0d14;
 }
 
-/* Native Dark Matter Map Styles */
+/* Native Dark Map Styles (OpenStreetMap Dark Aesthetic - Zero API Key Watermark) */
 .leaflet-container {
   background: #0b0d14 !important;
+}
+
+.hyper-map-tiles {
+  filter: brightness(0.65) invert(1) contrast(2.8) hue-rotate(200deg) saturate(0.35) brightness(0.75);
 }
 
 .map-hud-overlay {
