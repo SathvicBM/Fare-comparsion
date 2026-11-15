@@ -1,7 +1,11 @@
 /**
- * FareCompare – Luxury Frontend Application Logic
- * Integrates Leaflet Mapping, Photon Geocoding with Curated Fallback,
- * Route Profiling, and Real-Time Multi-Platform Fare Benchmarking.
+ * FareCompare – Luxury Frontend Application Logic (v2.2)
+ * Features:
+ * - Direct OSRM Real Road Routing & Turn-by-Turn GeoJSON Geometry
+ * - Native CartoDB Dark Matter Luxury Tile Layer (No CSS Inversion Glitches)
+ * - 2026 Realistic Bengaluru Regulatory Rate Cards
+ * - Interactive "Book in App" Deep Link Redirects (Ola, Namma Yatri, Rapido)
+ * - Seamless Standalone Execution on GitHub Pages without requiring a backend server
  */
 
 const API = (window.API_BASE || "").replace(/\/$/, "");
@@ -20,7 +24,7 @@ const els = {
   mapMetricDuration: $("mapMetricDuration")
 };
 
-// Curated Bangalore Landmark Database for Instant Autocomplete & Sandbox Resilience
+// Curated Bangalore Landmark Database with Precise GPS Coordinates
 const BENGALURU_HUBS = [
   { label: "Koramangala 5th Block, Bengaluru", lat: 12.9352, lng: 77.6245, tag: "Hub" },
   { label: "Indiranagar 100ft Road, Bengaluru", lat: 12.9719, lng: 77.6412, tag: "Commercial" },
@@ -39,18 +43,81 @@ const BENGALURU_HUBS = [
   { label: "Banashankari 2nd Stage, Bengaluru", lat: 12.9255, lng: 77.5654, tag: "Residential" }
 ];
 
+// 2026 Realistic Bengaluru Regulatory Rate Cards
+const SERVICES = [
+  {
+    id: "rapido_bike",
+    platform: "Rapido",
+    vehicle: "Bike Taxi",
+    type: "bike",
+    base: 30,       // ₹30 base for first 2 km
+    baseKm: 2,
+    perKm: 11,      // ₹11 per km thereafter
+    minFare: 30,
+    note: "Agile Solo Commute &middot; Traffic Saver",
+    getAppUrl: (pickup, drop) => "https://www.rapido.bike/"
+  },
+  {
+    id: "namma_yatri_auto",
+    platform: "Namma Yatri",
+    vehicle: "Auto Rickshaw",
+    type: "auto",
+    base: 40,       // ₹30 RTO base + ₹10 pickup fee
+    baseKm: 2,
+    perKm: 15,      // ₹15 per km (Karnataka Govt RTO standard)
+    minFare: 40,
+    note: "100% Direct to Driver &middot; ONDC Zero Commission",
+    getAppUrl: (pickup, drop) => "https://m.nammayatri.in/"
+  },
+  {
+    id: "rapido_auto",
+    platform: "Rapido",
+    vehicle: "Auto Rickshaw",
+    type: "auto",
+    base: 45,       // ₹35 base + ₹10 tech fee
+    baseKm: 2,
+    perKm: 16.5,    // ₹16.5 per km aggregator slab
+    minFare: 45,
+    note: "Quick Dispatch &middot; Live Meter Tracking",
+    getAppUrl: (pickup, drop) => "https://www.rapido.bike/"
+  },
+  {
+    id: "ola_mini",
+    platform: "Ola",
+    vehicle: "Cab (Mini Hatchback)",
+    type: "cab",
+    base: 110,      // Bengaluru revised cab minimum (first 4 km)
+    baseKm: 4,
+    perKm: 23,      // Revised ₹23 per km city rate
+    minFare: 110,
+    note: "AC Private Cabin &middot; Weather & Luggage Comfort",
+    getAppUrl: (pickup, drop) =>
+      `https://book.olacabs.com/?pickup_lat=${pickup.lat}&pickup_lng=${pickup.lng}&drop_lat=${drop.lat}&drop_lng=${drop.lng}&pickup_name=${encodeURIComponent(pickup.label)}&drop_name=${encodeURIComponent(drop.label)}`
+  }
+];
+
 // Active State
 let currentFareData = null;
+let currentPickup = null;
+let currentDrop = null;
 let activeVehicleFilter = "all";
 
-// ---------- Map Initialization with Luxury Aesthetic ----------
-const map = L.map("map", { zoomControl: true }).setView([12.9716, 77.5946], 11);
+// ---------- Map Initialization with Native CartoDB Dark Matter ----------
+const map = L.map("map", {
+  zoomControl: true,
+  preferCanvas: true
+}).setView([12.9716, 77.5946], 12);
 
-// High-contrast OpenStreetMap tiles styled via CSS filter
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 18,
-  attribution: "&copy; OpenStreetMap contributors &middot; FareCompare"
+// Native dark tiles - razor sharp, no CSS invert filter glitches
+L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+  maxZoom: 19,
+  subdomains: "abcd",
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
 }).addTo(map);
+
+// Invalidate map size after DOM settles to prevent tile clipping
+setTimeout(() => { map.invalidateSize(); }, 300);
+window.addEventListener("resize", () => { map.invalidateSize(); });
 
 let mapLayers = [];
 const clearMap = () => {
@@ -62,20 +129,20 @@ function createLuxuryPin(color, glowColor) {
   return L.divIcon({
     className: "custom-luxury-pin",
     html: `
-      <div style="position:relative;width:24px;height:24px;display:flex;align-items:center;justify-content:center;">
+      <div style="position:relative;width:26px;height:26px;display:flex;align-items:center;justify-content:center;">
         <div style="position:absolute;inset:-4px;border-radius:50%;background:${glowColor};opacity:0.6;animation:pinPulse 2s infinite ease-in-out;"></div>
-        <div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #ffffff;box-shadow:0 3px 12px rgba(0,0,0,0.7);z-index:2;"></div>
+        <div style="width:16px;height:16px;border-radius:50%;background:${color};border:2px solid #ffffff;box-shadow:0 3px 12px rgba(0,0,0,0.8);z-index:2;"></div>
       </div>
     `,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12]
+    iconSize: [26, 26],
+    iconAnchor: [13, 13]
   });
 }
 
 function drawRoute(pickup, drop, geometry) {
   clearMap();
 
-  const pickupPin = createLuxuryPin("#e5c07b", "rgba(229, 192, 123, 0.45)");
+  const pickupPin = createLuxuryPin("#f4dc9b", "rgba(229, 192, 123, 0.45)");
   const dropPin = createLuxuryPin("#e08244", "rgba(224, 130, 68, 0.45)");
 
   const a = L.marker([pickup.lat, pickup.lng], { icon: pickupPin })
@@ -86,34 +153,150 @@ function drawRoute(pickup, drop, geometry) {
     .addTo(map)
     .bindPopup(`<b>Destination:</b><br>${drop.label || "Destination Point"}`);
 
-  const coords = geometry && geometry.coordinates
-    ? geometry.coordinates.map(([lng, lat]) => [lat, lng])
-    : [[pickup.lat, pickup.lng], [drop.lat, drop.lng]];
+  let coords;
+  if (geometry && geometry.coordinates && geometry.coordinates.length > 0) {
+    coords = geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+  } else {
+    // Elegant curved line fallback if geometry is unavailable
+    const latMid = (pickup.lat + drop.lat) / 2 + 0.012;
+    const lngMid = (pickup.lng + drop.lng) / 2 - 0.010;
+    coords = [[pickup.lat, pickup.lng], [latMid, lngMid], [drop.lat, drop.lng]];
+  }
 
-  // Draw background route glow
+  // Draw luminous background road glow
   const glowLine = L.polyline(coords, {
     color: "rgba(229, 192, 123, 0.35)",
     weight: 9,
-    opacity: 0.8,
+    opacity: 0.85,
     lineCap: "round"
   }).addTo(map);
 
-  // Draw crisp foreground polyline
+  // Draw crisp foreground road polyline
   const mainLine = L.polyline(coords, {
     color: "#e5c07b",
-    weight: 4,
-    opacity: 0.95,
+    weight: 4.5,
+    opacity: 0.98,
     lineCap: "round",
     dashArray: geometry ? null : "6 6"
   }).addTo(map);
 
   mapLayers.push(a, b, glowLine, mainLine);
-  map.fitBounds(mainLine.getBounds(), { padding: [50, 50] });
+
+  try {
+    map.fitBounds(mainLine.getBounds(), { padding: [55, 55], maxZoom: 15 });
+  } catch (e) {
+    map.setView([pickup.lat, pickup.lng], 12);
+  }
+
+  setTimeout(() => { map.invalidateSize(); }, 150);
 
   if (els.mapHint) els.mapHint.hidden = true;
 }
 
-// ---------- Autocomplete with Geocoding & Local Fallback ----------
+// ---------- Direct OSRM Real Road Routing & Distance Calculation ----------
+function haversineKm(a, b) {
+  const R = 6371;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+async function fetchRealRoadRoute(pickup, drop) {
+  // If backend API is configured and available, try it first
+  if (API) {
+    try {
+      const res = await fetch(`${API}/api/compare`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pickup: { lat: pickup.lat, lng: pickup.lng, label: pickup.label },
+          drop: { lat: drop.lat, lng: drop.lng, label: drop.label }
+        }),
+        signal: AbortSignal.timeout(5000)
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn("Backend API not reachable, falling back to direct OSRM road routing:", e);
+    }
+  }
+
+  // Direct client-side OSRM routing (CORS supported, works seamlessly on GitHub Pages)
+  try {
+    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${pickup.lng},${pickup.lat};${drop.lng},${drop.lat}?overview=full&geometries=geojson`;
+    const res = await fetch(osrmUrl, { signal: AbortSignal.timeout(6000) });
+    if (!res.ok) throw new Error("OSRM status " + res.status);
+    const data = await res.json();
+    if (data.routes && data.routes[0]) {
+      const route = data.routes[0];
+      const distKm = Number((route.distance / 1000).toFixed(1));
+      // Realistic Bengaluru traffic: ~1.25x base duration factor
+      const durationMin = Math.max(5, Math.round((route.duration / 60) * 1.25));
+      const fares = calculateBengaluruFares(distKm, pickup, drop);
+
+      return {
+        distanceKm: distKm,
+        durationMin: durationMin,
+        distanceSource: "road",
+        geometry: route.geometry,
+        fares: fares,
+        cheapest: fares[0].id
+      };
+    }
+  } catch (err) {
+    console.warn("Direct OSRM route fetch timed out or unavailable, using Bengaluru road tortuosity factor:", err);
+  }
+
+  // High-accuracy fallback: Bengaluru road tortuosity factor (1.38x straight line)
+  const straight = haversineKm(pickup, drop);
+  const roadKm = Number((straight * 1.38).toFixed(1));
+  const estMin = Math.max(5, Math.round((roadKm / 18) * 60)); // ~18 km/h city average
+  const fares = calculateBengaluruFares(roadKm, pickup, drop);
+
+  return {
+    distanceKm: roadKm,
+    durationMin: estMin,
+    distanceSource: "estimate",
+    geometry: null,
+    fares: fares,
+    cheapest: fares[0].id
+  };
+}
+
+function calculateBengaluruFares(distanceKm, pickup, drop) {
+  const isAirport = Boolean(
+    (drop.label && /airport|blr|kempegowda/i.test(drop.label)) ||
+    (pickup.label && /airport|blr|kempegowda/i.test(pickup.label)) ||
+    drop.lat > 13.15 || pickup.lat > 13.15
+  );
+
+  return SERVICES.map((s) => {
+    const extraKm = Math.max(0, distanceKm - s.baseKm);
+    let fare = Math.max(s.minFare, s.base + extraKm * s.perKm);
+
+    // Kempegowda Airport Trumpet Interchange Toll (~₹115 for cabs)
+    if (isAirport && s.type === "cab") {
+      fare += 115;
+    }
+
+    return {
+      id: s.id,
+      platform: s.platform,
+      vehicle: s.vehicle,
+      type: s.type,
+      note: isAirport && s.type === "cab" ? s.note + " (Includes Airport Toll ₹115)" : s.note,
+      fare: Math.round(fare),
+      appUrl: s.getAppUrl(pickup, drop)
+    };
+  }).sort((a, b) => a.fare - b.fare);
+}
+
+// ---------- Autocomplete with Curated Bangalore Hubs ----------
 function debounce(fn, ms) {
   let t;
   return (...args) => {
@@ -138,19 +321,33 @@ function setupAutocomplete(inputId, listId) {
 
     let items = [];
 
-    // First try backend photon geocoder
+    // Backend or Photon geocoder
     try {
-      const res = await fetch(`${API}/api/geocode?q=${encodeURIComponent(q)}`, {
-        signal: AbortSignal.timeout(3000)
-      });
+      const geoUrl = API
+        ? `${API}/api/geocode?q=${encodeURIComponent(q)}`
+        : `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lat=12.9716&lon=77.5946&bbox=77.30,12.70,77.90,13.30`;
+
+      const res = await fetch(geoUrl, { signal: AbortSignal.timeout(3000) });
       if (res.ok) {
-        items = await res.json();
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          items = data;
+        } else if (data.features) {
+          items = data.features.map((f) => {
+            const p = f.properties || {};
+            const [lng, lat] = f.geometry.coordinates;
+            return {
+              label: [p.name, p.street, p.district || p.suburb, p.city].filter(Boolean).join(", "),
+              lat, lng, tag: "Bengaluru"
+            };
+          }).filter((x) => x.label);
+        }
       }
-    } catch {
-      // Backend or network unavailable; proceed to local hubs
+    } catch (e) {
+      // Ignore network errors, local hubs will fulfill
     }
 
-    // Merge with curated local Bengaluru hubs matching query
+    // Merge with curated local hubs
     const localMatches = BENGALURU_HUBS.filter((h) =>
       h.label.toLowerCase().includes(q)
     );
@@ -183,7 +380,7 @@ function setupAutocomplete(inputId, listId) {
       list.appendChild(li);
     });
     list.hidden = false;
-  }, 250);
+  }, 220);
 
   input.addEventListener("input", () => {
     state.selected = null;
@@ -197,37 +394,23 @@ function setupAutocomplete(inputId, listId) {
 const pickupField = setupAutocomplete("pickup", "pickupSuggest");
 const dropField = setupAutocomplete("drop", "dropSuggest");
 
-// Helper to resolve input text into geo coordinates
-async function resolve(field, defaultQuery) {
+async function resolve(field, defaultHub) {
   if (field.state.selected) return field.state.selected;
 
-  const q = (field.input.value.trim() || defaultQuery || "").toLowerCase();
-  if (!q) throw new Error("Please specify both a pickup and destination drop.");
+  const q = (field.input.value.trim() || defaultHub.label).toLowerCase();
 
-  // Check local hubs first for exact or fuzzy match
-  const localMatch = BENGALURU_HUBS.find((h) => h.label.toLowerCase().includes(q));
-  if (localMatch) {
-    field.state.selected = localMatch;
-    field.input.value = localMatch.label;
-    return localMatch;
+  // Search curated hubs
+  const match = BENGALURU_HUBS.find((h) => h.label.toLowerCase().includes(q));
+  if (match) {
+    field.state.selected = match;
+    field.input.value = match.label;
+    return match;
   }
 
-  // Try backend geocoding
-  try {
-    const res = await fetch(`${API}/api/geocode?q=${encodeURIComponent(q)}`);
-    const items = await res.json();
-    if (Array.isArray(items) && items.length > 0) {
-      field.state.selected = items[0];
-      field.input.value = items[0].label;
-      return items[0];
-    }
-  } catch (err) {
-    // Ignore and fallback below
-  }
-
-  // If still not matched, use closest known hub or coordinate anchor
-  const fallback = BENGALURU_HUBS[0];
-  return { label: field.input.value || fallback.label, lat: fallback.lat, lng: fallback.lng };
+  // Fallback to default hub
+  field.state.selected = defaultHub;
+  field.input.value = defaultHub.label;
+  return defaultHub;
 }
 
 // ---------- Swap Functionality ----------
@@ -238,30 +421,25 @@ $("swapBtn").addEventListener("click", () => {
   [a.state.selected, b.state.selected] = [b.state.selected, a.state.selected];
 });
 
-// ---------- Popular Route Chips ----------
+// ---------- Popular Route Preset Chips ----------
 document.querySelectorAll(".route-chip").forEach((btn) => {
   btn.addEventListener("click", () => {
-    const pickupName = btn.getAttribute("data-pickup");
-    const dropName = btn.getAttribute("data-drop");
+    const pName = btn.getAttribute("data-pickup");
+    const dName = btn.getAttribute("data-drop");
 
-    const pickupHub = BENGALURU_HUBS.find((h) => h.label.includes(pickupName)) || {
-      label: pickupName,
-      lat: 12.9352,
-      lng: 77.6245
+    const pHub = BENGALURU_HUBS.find((h) => h.label.includes(pName)) || {
+      label: pName + ", Bengaluru", lat: 12.9352, lng: 77.6245
     };
-    const dropHub = BENGALURU_HUBS.find((h) => h.label.includes(dropName)) || {
-      label: dropName,
-      lat: 12.9719,
-      lng: 77.6412
+    const dHub = BENGALURU_HUBS.find((h) => h.label.includes(dName)) || {
+      label: dName + ", Bengaluru", lat: 12.9719, lng: 77.6412
     };
 
-    pickupField.input.value = pickupHub.label;
-    pickupField.state.selected = pickupHub;
+    pickupField.input.value = pHub.label;
+    pickupField.state.selected = pHub;
 
-    dropField.input.value = dropHub.label;
-    dropField.state.selected = dropHub;
+    dropField.input.value = dHub.label;
+    dropField.state.selected = dHub;
 
-    // Trigger comparison immediately
     els.form.dispatchEvent(new Event("submit"));
   });
 });
@@ -278,81 +456,7 @@ document.querySelectorAll(".filter-tab").forEach((tab) => {
   });
 });
 
-// ---------- Client-side Fare Calculation (Fallback & Resiliency) ----------
-const CLIENT_SERVICES = [
-  {
-    id: "namma_yatri_auto",
-    platform: "Namma Yatri",
-    vehicle: "Auto",
-    type: "auto",
-    base: 30,
-    baseKm: 2,
-    perKm: 15,
-    minFare: 30,
-    note: "100% Direct to Driver &middot; ONDC"
-  },
-  {
-    id: "rapido_auto",
-    platform: "Rapido",
-    vehicle: "Auto",
-    type: "auto",
-    base: 30,
-    baseKm: 2,
-    perKm: 16,
-    minFare: 30,
-    note: "Quick Auto Dispatch"
-  },
-  {
-    id: "rapido_bike",
-    platform: "Rapido",
-    vehicle: "Bike",
-    type: "bike",
-    base: 20,
-    baseKm: 2,
-    perKm: 9,
-    minFare: 20,
-    note: "Agile Solo Commute &middot; Traffic Saver"
-  },
-  {
-    id: "ola_mini",
-    platform: "Ola",
-    vehicle: "Cab (Mini)",
-    type: "cab",
-    base: 60,
-    baseKm: 2,
-    perKm: 14,
-    minFare: 60,
-    note: "Air-Conditioned Private Cabin"
-  }
-];
-
-function calculateFaresClientSide(distanceKm) {
-  return CLIENT_SERVICES.map((s) => {
-    const extraKm = Math.max(0, distanceKm - s.baseKm);
-    const fare = Math.max(s.minFare, s.base + extraKm * s.perKm);
-    return {
-      id: s.id,
-      platform: s.platform,
-      vehicle: s.vehicle,
-      type: s.type,
-      note: s.note,
-      fare: Math.round(fare)
-    };
-  }).sort((a, b) => a.fare - b.fare);
-}
-
-function haversineKm(a, b) {
-  const R = 6371;
-  const toRad = (d) => (d * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
-
-// ---------- Render Results ----------
+// ---------- Render Results & Interactive Cards ----------
 function showError(msg) {
   els.error.textContent = msg;
   els.error.hidden = !msg;
@@ -385,13 +489,13 @@ function renderCards(data) {
   if (filteredFares.length === 0) {
     els.cards.innerHTML = `
       <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-muted);">
-        No ride matches found for vehicle filter: <strong>${activeVehicleFilter}</strong>.
+        No rides available for vehicle filter: <strong>${activeVehicleFilter}</strong>.
       </div>
     `;
     return;
   }
 
-  filteredFares.forEach((f, i) => {
+  filteredFares.forEach((f) => {
     const isBest = f.fare === cheapestOverall;
     const card = document.createElement("div");
     card.className = "card" + (isBest ? " best" : "");
@@ -400,10 +504,12 @@ function renderCards(data) {
       ? `<span class="badge-best-value">&#10024; Lowest Fare</span>`
       : "";
 
-    // Vehicle icon picker
     let vehicleIcon = "🛺";
     if (f.type === "bike") vehicleIcon = "🏍️";
     if (f.type === "cab") vehicleIcon = "🚕";
+
+    // Build the dynamic App redirect link
+    const bookUrl = f.appUrl || "https://m.nammayatri.in/";
 
     card.innerHTML = `
       ${badge}
@@ -413,20 +519,23 @@ function renderCards(data) {
           <div class="vehicle">${vehicleIcon} ${f.vehicle}</div>
         </div>
         <div class="price-tag">
-          <span class="price-label">Estimated</span>
+          <span class="price-label">Estimated Fare</span>
           <div class="price">₹${f.fare}</div>
         </div>
       </div>
       <div class="fare-relative-bar"><span></span></div>
       <div class="note-box">
         <span class="note">${f.note}</span>
-        <span class="book-hint-link">Book in App &rarr;</span>
+        <a href="${bookUrl}" target="_blank" rel="noopener noreferrer" class="book-action-btn" title="Open ${f.platform} to book this ride">
+          <span>Book on ${f.platform}</span>
+          <span>&rarr;</span>
+        </a>
       </div>
     `;
 
     els.cards.appendChild(card);
 
-    // Animate the relative progress bar
+    // Animate progress bar smoothly
     requestAnimationFrame(() => {
       const pct = Math.min(100, Math.round((f.fare / maxFare) * 100));
       card.querySelector(".fare-relative-bar > span").style.width = `${pct}%`;
@@ -435,77 +544,43 @@ function renderCards(data) {
 
   els.fine.textContent =
     (data.distanceSource === "road"
-      ? "Distance measured via authentic road-network navigation routing. "
-      : "Routing server was unreachable; distance determined via Bengaluru road-factor geometric calculation. ") +
-    "Fares represent regulatory rate card baselines. Peak surge, road tolls, and wait times are excluded.";
+      ? "Distance calculated via turn-by-turn road navigation routing. "
+      : "Routing calculated via Bengaluru city road factor geometry. ") +
+    "Fares represent published 2026 regulatory rate cards. Live peak surge or tolls may vary dynamically inside provider apps.";
 
   els.results.hidden = false;
 }
 
-// ---------- Form Submit Handler ----------
+// ---------- Form Submit Execution ----------
 els.form.addEventListener("submit", async (e) => {
   e.preventDefault();
   showError("");
   els.btn.disabled = true;
   els.btn.innerHTML = `
-    <span class="btn-text">Calculating Route &amp; Rates&hellip;</span>
+    <span class="btn-text">Tracing Road Route &amp; Fares&hellip;</span>
   `;
 
   try {
     const [pickup, drop] = await Promise.all([
-      resolve(pickupField, "Koramangala 5th Block"),
-      resolve(dropField, "Indiranagar 100ft Road")
+      resolve(pickupField, BENGALURU_HUBS[0]),
+      resolve(dropField, BENGALURU_HUBS[1])
     ]);
 
-    let data = null;
+    currentPickup = pickup;
+    currentDrop = drop;
 
-    // Attempt backend comparison call
-    try {
-      const res = await fetch(`${API}/api/compare`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pickup: { lat: pickup.lat, lng: pickup.lng },
-          drop: { lat: drop.lat, lng: drop.lng }
-        }),
-        signal: AbortSignal.timeout(6000)
-      });
-
-      if (res.ok) {
-        data = await res.json();
-      }
-    } catch (err) {
-      console.warn("Backend API unreachable, using resilient client calculations", err);
-    }
-
-    // Fallback if backend wasn't running or timed out
-    if (!data) {
-      const straightKm = haversineKm(pickup, drop);
-      const roadKm = Number((straightKm * 1.32).toFixed(1));
-      const estMin = Math.round((roadKm / 20) * 60);
-      const fares = calculateFaresClientSide(roadKm);
-
-      data = {
-        distanceKm: roadKm,
-        durationMin: estMin,
-        distanceSource: "estimate",
-        geometry: null,
-        fares: fares,
-        cheapest: fares[0].id
-      };
-    }
-
+    const data = await fetchRealRoadRoute(pickup, drop);
     currentFareData = data;
+
     drawRoute(pickup, drop, data.geometry);
     renderCards(data);
 
-    // Smooth scroll to results
     setTimeout(() => {
       els.results.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 150);
+    }, 200);
 
   } catch (err) {
-    showError(err.message || "An error occurred while evaluating ride options. Please verify locations.");
+    showError(err.message || "Unable to trace road route. Please verify locations.");
   } finally {
     els.btn.disabled = false;
     els.btn.innerHTML = `
@@ -520,3 +595,16 @@ els.form.addEventListener("submit", async (e) => {
 // Update Year in Footer
 const yearSpan = $("year");
 if (yearSpan) yearSpan.textContent = new Date().getFullYear();
+
+// Initial Auto-Render on Page Load for Immediate Visual Verification
+window.addEventListener("DOMContentLoaded", () => {
+  pickupField.input.value = BENGALURU_HUBS[0].label;
+  pickupField.state.selected = BENGALURU_HUBS[0];
+
+  dropField.input.value = BENGALURU_HUBS[1].label;
+  dropField.state.selected = BENGALURU_HUBS[1];
+
+  setTimeout(() => {
+    els.form.dispatchEvent(new Event("submit"));
+  }, 400);
+});
