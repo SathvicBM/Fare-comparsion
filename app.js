@@ -196,17 +196,18 @@ function initHyperiuxCanvas() {
 }
 
 // ============================================================================
-// 2. LEAFLET MAP (CartoDB Dark Matter Retina Tiles)
+// 2. LEAFLET MAP (High-Res OpenStreetMap with Dark Theme - Zero API Key Needed)
 // ============================================================================
 const map = L.map("map", {
   zoomControl: true,
   preferCanvas: true
 }).setView([12.9716, 77.5946], 12);
 
-L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
-  subdomains: "abcd",
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  subdomains: "abc",
+  className: "hyper-map-tiles",
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'
 }).addTo(map);
 
 setTimeout(() => { map.invalidateSize(); }, 300);
