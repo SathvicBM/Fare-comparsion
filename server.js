@@ -2,8 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const { estimateFares } = require("./fare");
-const { estimateBusFares } = require("./bus");
-const gtfs = require("./gtfs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,9 +9,8 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Bengaluru area: results are restricted to this box so addresses
-// can't match a same-named place somewhere else in the world.
-const BBOX = { minLon: 77.35, minLat: 12.75, maxLon: 77.85, maxLat: 13.25 };
+// Bengaluru geographic bounding box
+const BBOX = { minLon: 77.30, minLat: 12.70, maxLon: 77.90, maxLat: 13.30 };
 const CENTER = { lat: 12.9716, lng: 77.5946 };
 
 const inBengaluru = (p) =>
@@ -34,8 +31,7 @@ function haversineKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-// Real road distance + route shape from the public OSRM server.
-// Falls back to straight-line distance x 1.3 if OSRM is unreachable.
+// Real road distance + GeoJSON geometry from OSRM
 async function getRoute(a, b) {
   try {
     const url =
@@ -48,39 +44,37 @@ async function getRoute(a, b) {
     if (!route) throw new Error("No route");
     return {
       distanceKm: route.distance / 1000,
-      durationMin: route.duration / 60,
+      durationMin: (route.duration / 60) * 1.25, // 1.25 factor for realistic Bengaluru traffic
       geometry: route.geometry,
       source: "road"
     };
   } catch (err) {
-    const km = haversineKm(a, b) * 1.3;
+    const straight = haversineKm(a, b);
+    const km = straight * 1.38; // Real road factor in Bengaluru
     return {
       distanceKm: km,
-      durationMin: (km / 22) * 60,
+      durationMin: (km / 18) * 60, // ~18 km/h city average
       geometry: null,
       source: "estimate"
     };
   }
 }
 
-app.get("/api/health", (req, res) => res.json({ ok: true }));
+app.get("/api/health", (req, res) => res.json({ ok: true, version: "2.1-luxury" }));
 
-// Is bus schedule data loaded? (handy while setting up the GTFS files)
-app.get("/api/bus/status", (req, res) => res.json(gtfs.info()));
-
-// GET /api/geocode?q=koramangala  ->  [{ label, lat, lng }]
+// GET /api/geocode?q=koramangala
 app.get("/api/geocode", async (req, res) => {
   const q = String(req.query.q || "").trim();
-  if (q.length < 3) return res.json([]);
+  if (q.length < 2) return res.json([]);
 
   const bbox = `${BBOX.minLon},${BBOX.minLat},${BBOX.maxLon},${BBOX.maxLat}`;
   const url =
-    `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5` +
+    `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=6` +
     `&lat=${CENTER.lat}&lon=${CENTER.lng}&bbox=${bbox}`;
 
   try {
     const r = await fetch(url, {
-      headers: { "User-Agent": "FareCompare/1.0 (student project)" },
+      headers: { "User-Agent": "FareCompare/2.0 (Bengaluru Transit App)" },
       signal: AbortSignal.timeout(6000)
     });
     if (!r.ok) throw new Error("Photon " + r.status);
@@ -105,46 +99,37 @@ app.get("/api/geocode", async (req, res) => {
   }
 });
 
-// POST /api/compare  { pickup: {lat,lng}, drop: {lat,lng}, departAt?: ISO time }
+// POST /api/compare { pickup: {lat,lng,label}, drop: {lat,lng,label} }
 app.post("/api/compare", async (req, res) => {
-  const { pickup, drop, departAt } = req.body || {};
+  const { pickup, drop } = req.body || {};
 
   if (!inBengaluru(pickup) || !inBengaluru(drop)) {
     return res
       .status(400)
-      .json({ error: "Pickup and drop must both be inside Bengaluru." });
+      .json({ error: "Pickup and destination drop must both be within the Bengaluru metropolitan area." });
   }
-  if (departAt !== undefined && Number.isNaN(new Date(departAt).getTime())) {
-    return res.status(400).json({ error: "departAt must be a valid date-time." });
-  }
+
+  const isAirport = Boolean(
+    (drop.label && /airport|blr|kempegowda/i.test(drop.label)) ||
+    (pickup.label && /airport|blr|kempegowda/i.test(pickup.label)) ||
+    drop.lat > 13.15 || pickup.lat > 13.15
+  );
 
   const route = await getRoute(pickup, drop);
-
-  // Buses: scheduled direct services (from GTFS) plus an estimated fare.
-  const transit = gtfs.findDirectBuses(pickup, drop, gtfs.istNow(departAt));
-  let busFares = estimateBusFares(route.distanceKm).map((f) => ({
-    ...f,
-    availability: transit.status !== "ready" ? "unchecked" : transit.options.length ? "scheduled" : "none"
-  }));
-  if (transit.status === "ready" && !transit.options.length) busFares = []; // no direct bus, so don't list one
-
-  const fares = [...estimateFares(route.distanceKm), ...busFares].sort((a, b) => a.fare - b.fare);
+  const fares = estimateFares(route.distanceKm, isAirport);
 
   res.json({
     distanceKm: Number(route.distanceKm.toFixed(1)),
-    durationMin: Math.round(route.durationMin),
+    durationMin: Math.max(5, Math.round(route.durationMin)),
     distanceSource: route.source,
     geometry: route.geometry,
     fares,
-    cheapest: fares[0].id,
-    transit
+    cheapest: fares[0].id
   });
 });
 
-// Serve the frontend from the same server (handy for one-click deploys).
 app.use(express.static(path.join(__dirname, "..", "frontend")));
 
 app.listen(PORT, () => {
-  console.log(`FareCompare running at http://localhost:${PORT}`);
-  gtfs.load(); // loads bus schedules in the background if backend/data/gtfs exists
+  console.log(`FareCompare Server running at http://localhost:${PORT}`);
 });
